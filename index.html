@@ -879,7 +879,7 @@ const expired=()=>S.cfg&&S.cfg.expiry&&new Date().toISOString().slice(0,10)>S.cf
 // ---------- Excel commands ----------
 const online=()=>S.hb&&(Date.now()-S.hbMod<600000);
 async function excelCmd(cmd,...args){
-  if(!S.connected||!S.bridge){
+  if(true){
     if(["EXTRACT","TRANSFER","CLEAR","LINK"].indexOf(cmd)<0)return null;
     const cl=s=>String(s==null?"":s).replace(/[|\t\r\n]+/g," ");
     const txt="#ECLIPSE_CMD|"+Date.now()+"|"+[cmd].concat(args).map(cl).join("|");
@@ -1288,7 +1288,7 @@ async function doKey(id){
     if(!mk){toast("Please enter Market.","bad");return;}if(!op){toast("Please enter OPS Tbl #.","bad");return;}
     const fl=[["tkT","T"],["tkI","I"],["tkS","S"],["tkO","O"]].filter(x=>$(x[0]).checked).map(x=>x[1]).join("");
     if(!fl){toast("Tick at least one table.","bad");return;}
-    if(S.bridge&&!online()){toast("Excel is not connected. Open Excel first, then press EXTRACT.","bad");runBar(true,"Excel is not connected - open Excel first","bad");return;}
+    if(false){toast("Excel is not connected. Open Excel first, then press EXTRACT.","bad");runBar(true,"Excel is not connected - open Excel first","bad");return;}
     // new EXTRACT = new job: the old PPOone is erased (cache too); drop the new PPOone after/while extracting
     try{ppoForget();E.eval("userPPOoneData=[];try{UpdateDataLEDs();}catch(e){}");const z=$("ppoDrop");z.classList.remove("ok");z.innerHTML="DROP PPOone FILE HERE &nbsp;(xlsx / csv / txt) &nbsp;or click";renderAll();}catch(e){console.error(e);}
     S.stopReq=false;try{await removeFile(S.bridge,"stop.flag");}catch(e){}
