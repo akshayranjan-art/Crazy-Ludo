@@ -1062,12 +1062,26 @@ async function pollData(){
 const CLIP_BAS="";
 function dlBlob(name,data,type){const b=new Blob([data],{type:type||"application/octet-stream"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
 function ackExcel(){try{navigator.clipboard.writeText("#ECLIPSE_ACK|"+Date.now()).catch(()=>{});}catch(e){}}
+function paintXchip(){const on=S.clipAt&&Date.now()-S.clipAt<1800000,c=$("xchip");if(c)c.innerHTML='<i class="led '+(on?"g":"r")+'"></i>'+(on?"EXCEL ONLINE"+(S.exWho?" · "+esc(S.exWho):""):"EXCEL OFFLINE");paintExBar();}
+async function pingExcel(){
+  const id=Date.now();
+  try{await navigator.clipboard.writeText("#ECLIPSE_CMD|"+id+"|PING");}catch(e){toast("The browser did not allow the clipboard. Click Allow and press again.","bad");return;}
+  toast("Looking for Excel ... keep Excel open","");
+  const t0=Date.now();
+  while(Date.now()-t0<15000){
+    await sleep(1000);let t="";
+    try{t=await navigator.clipboard.readText();}catch(e){continue;}
+    if(String(t).indexOf("#ECLIPSE_HELLO")===0){S.clipAt=Date.now();S.exWho=String(t).split("|")[1]||"";try{await navigator.clipboard.writeText("#ECLIPSE_ACK|"+id);}catch(e){}paintXchip();toast("Excel connected ✓","ok");return;}
+  }
+  toast("Excel did not answer. Is the ECLIPSE Excel open (macros enabled)? Its bar must be green.","bad");
+}
 async function clipImport(manual){
   if(!S.ready||$("app").hidden||!E)return;
   let t="";
   try{t=await navigator.clipboard.readText();}
   catch(e){if(manual)toast("The browser did not allow the clipboard. Press Allow, or paste with Ctrl+V into the PPOone box area.","bad");return;}
   t=String(t||"");
+  if(t.indexOf("#ECLIPSE_HELLO")===0){S.clipAt=Date.now();S.exWho=t.split("|")[1]||"";paintXchip();return;}
   if(t.indexOf("#ECLIPSE_ACK")===0){if(manual)toast("This Excel data is already loaded.","");return;}
   if(t.indexOf("#ECLIPSE_BUNDLE")!==0||!/\n@@END\s*$/.test(t)){if(manual)toast("The clipboard has no Excel data yet. In Excel press EXTRACT (or SEND TO HTML) first.","bad");return;}
   const hh=hashStr(t);
@@ -1485,7 +1499,7 @@ function askText(title,cb){
 
 // ---------- heartbeat / log polling ----------
 async function pollBridge(){
-  if(!S.connected||!S.bridge)return;
+  if(!S.connected||!S.bridge){paintXchip();return;}
   const r=await readFile(S.bridge,"excel_status.txt");
   if(r){const p=r.text.trim().split("|");S.hb={ts:p[0],who:p[1],pc:p[2],ver:p[3],state:p[4],last:p.slice(5).join("|")};S.hbMod=r.mod;}
   await pollEvent();
@@ -1712,8 +1726,8 @@ async function start(){
   $("btnConnect").onclick=async()=>{if(S.pendingHandle)await reconnect();else await pickFolder();if(S.connected)tryAuto();};
   $("btnLogin").onclick=doLogin;$("lPass").onkeydown=$("lMsid").onkeydown=e=>{if(e.key==="Enter"&&!$("btnLogin").disabled)doLogin();};
   $("btnOut").onclick=logout;clipWire();
-  $("xchip").onclick=()=>{if(!S.connected)reconnect();};
-  $("btnExConn").onclick=ev=>{if(!S.connected||S.pendingHandle)reconnect();else if(ev.ctrlKey&&S.exRoot){forgetExcelFolder();}else if(!online()||ev.shiftKey){_exAsk=0;askExcelFolder();}else pickFolder();};
+  $("xchip").onclick=()=>{if(!S.connected)reconnect();else pingExcel();};
+  $("btnExConn").onclick=ev=>{if(!S.connected||S.pendingHandle){reconnect();return;}if(!ev.shiftKey){pingExcel();return;}if(0)reconnect();else if(ev.ctrlKey&&S.exRoot){forgetExcelFolder();}else if(!online()||ev.shiftKey){_exAsk=0;askExcelFolder();}else pickFolder();};
   $("calcTop").onclick=ev=>{ev.stopPropagation();openCalc($("calcTop"),document);};
   $("btnAdmin").onclick=()=>{if(S.admin)nav(S.view==="admin"?"dash":"admin");};
   $("lnkReset").onclick=resetPw;
